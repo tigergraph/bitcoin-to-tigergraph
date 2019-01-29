@@ -24,7 +24,7 @@ Fortunately [Bitcoin Core](https://bitcoin.org/en/download) is public software t
 
 ## Golang setup
 
-## Installing dependencies
+### Installing dependencies
 
 Used this [gocoin library](github.com/piotrnar/gocoin) to parse the blockchain. 
 
@@ -40,7 +40,7 @@ In the program, set the desired start block and desired end block and press run.
 
 ## Running
 
-Please run blockchain_parse.go
+Please run blockchain_parse_csv.go
 
 
 ## Python setup (NOT FINISHED)
@@ -57,11 +57,11 @@ Unfortunately as the pyblockchain library contains no way to count the overall b
 
 ### Running to create csv files
 
-Run parse_blockchain.py
+Run blockchain_parse_csv.py
 
 ### Runnning to kakfka
 
-Run parse_blockchain_kafka.py
+Run blockchain_parse_kafka.py
 
 
 ## Putting the data into TigerGraph
