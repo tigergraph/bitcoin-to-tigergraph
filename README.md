@@ -1,4 +1,4 @@
-# Visualize Blockchain with a Graph Database
+# Visualize Blockchain with TigerGraph
 
 The goal of this project was to provide a method for any user to upload blockchain data onto the TigerGraph database w/o the use of extra hardware boosts or tremendous amount of CPU usage or memory consumption. The reason for this was to make analyzing the blockchain available to both interested companies as well as amateur developers. Running this program will produce parsed sets of blockchain data that will be ready to analyze on the TigerGraph platform.
 
