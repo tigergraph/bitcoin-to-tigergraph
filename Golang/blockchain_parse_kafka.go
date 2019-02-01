@@ -1,13 +1,12 @@
 package main
 
 import (
-	"encoding/csv"
-	"encoding/hex"
 	"fmt"
+	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"encoding/hex"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/blockdb"
 	"log"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -31,7 +30,7 @@ func main() {
 	// PARAMETERS
 	batch_size := 1000
 	end_block := 350000
-	desired_start_block := 0
+	desired_start_block := 0//224000
 	database := "/Users/sai/Desktop/bitcoin_data/blocks"
 
 	log.Println("Starting the parsing process...")
@@ -41,30 +40,25 @@ func main() {
 	// Specify blocks directory
 	BlockDatabase := blockdb.NewBlockDB(database, Magic)
 
-	//.Preparing files to write to
-	blk_fl, err1 := os.OpenFile("blocks1.csv", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
-	txn_fl, err2 := os.OpenFile("transactions1.csv", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
-	in_fl, err3 := os.OpenFile("input1.csv", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
-	out_fl, err4 := os.OpenFile("output1.csv", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
-
-	for _, err := range []error{err1, err2, err3, err4} {
-		checkError("Cannot create file", err)
+	// Connecting to broker and creating new kafka producer
+	p, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": "192.168.0.111:9092"})
+	if err != nil {
+		panic(err)
 	}
 
-	defer blk_fl.Close()
-	defer txn_fl.Close()
-	defer in_fl.Close()
-	defer out_fl.Close()
+	defer p.Close()
 
-	block_writer := csv.NewWriter(blk_fl)
-	txn_writer := csv.NewWriter(txn_fl)
-	in_writer := csv.NewWriter(in_fl)
-	out_writer := csv.NewWriter(out_fl)
-
-	defer block_writer.Flush()
-	defer txn_writer.Flush()
-	defer in_writer.Flush()
-	defer out_writer.Flush()
+	// Delivery report handler for produced messages
+	go func() {
+		for e := range p.Events() {
+			switch ev := e.(type) {
+			case *kafka.Message:
+				if ev.TopicPartition.Error != nil {
+					fmt.Printf("Delivery failed: %v\n", ev.TopicPartition)
+				}
+			}
+		}
+	}()
 
 	// make channels to pass data
 	block_channel := make(chan BlockDat, 50000)
@@ -76,14 +70,14 @@ func main() {
 	// Process block data in channel in the background
 	go func() {
 		for msg := range block_channel {
-			processBlock(msg, txn_channel, block_writer, tx_wg)
+			processBlock(msg, txn_channel, p, tx_wg)
 		}
 	}()
 
 	// Process transaction data in channel in the background
 	go func() {
 		for msg := range txn_channel {
-			processTxn(msg, txn_writer, in_writer, out_writer)
+			processTxn(msg, p)
 		}
 	}()
 
@@ -120,16 +114,21 @@ func main() {
 	close(block_channel)
 	close(txn_channel)
 
+	// Wait for message deliveries before shutting down
+	p.Flush(15 * 1000)
+
 	log.Println("FINISHED!")
 }
 
-func checkError(message string, err error) {
-	if err != nil {
-		log.Fatal(message, err)
-	}
+
+func publish_message(p *kafka.Producer, msg string, topic string) {
+	p.Produce(&kafka.Message{
+			TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
+			Value:          []byte(msg),
+	}, nil)
 }
 
-func processTxn(data TxnDat, txn_writer *csv.Writer, in_writer *csv.Writer, out_writer *csv.Writer) {
+func processTxn(data TxnDat, p *kafka.Producer) {
 
 	tx := data.tx
 	bl := data.block
@@ -143,7 +142,7 @@ func processTxn(data TxnDat, txn_writer *csv.Writer, in_writer *csv.Writer, out_
 		tx.IsCoinBase(),
 	)
 
-	txn_writer.Write(strings.Split(txn_msg, ","))
+	publish_message(p, txn_msg, "txn_data")
 
 	if !tx.IsCoinBase() {
 		for txin_index, txin := range tx.TxIn {
@@ -157,7 +156,7 @@ func processTxn(data TxnDat, txn_writer *csv.Writer, in_writer *csv.Writer, out_
 				hex.EncodeToString(txin.ScriptSig),
 				txin.Sequence,
 			)
-			in_writer.Write(strings.Split(input_msg, ","))
+			publish_message(p, input_msg, "input_data")
 		}
 	}
 
@@ -171,12 +170,12 @@ func processTxn(data TxnDat, txn_writer *csv.Writer, in_writer *csv.Writer, out_
 			txout_addr,
 			tx.Hash.String(),
 		)
-		out_writer.Write(strings.Split(output_msg, ","))
+		publish_message(p, output_msg, "output_data")
 	}
 
 }
 
-func processBlock(data BlockDat, txn_channel chan TxnDat, block_writer *csv.Writer, tx_wg sync.WaitGroup) {
+func processBlock(data BlockDat, txn_channel chan TxnDat, p *kafka.Producer, tx_wg sync.WaitGroup) {
 
 	i := data.num
 	dat := data.dat
@@ -204,12 +203,11 @@ func processBlock(data BlockDat, txn_channel chan TxnDat, block_writer *csv.Writ
 		bl.Bits(),
 	)
 
-	block_writer.Write(strings.Split(block_msg, ","))
+	publish_message(p, block_msg, "block_data")
 
 	bl.BuildTxList()
 	tx_wg.Add(len(bl.Txs))
 
-	//fmt.Println("Number of transactions for this block ",len(bl.Txs))
 
 	for _, tx := range bl.Txs {
 		go func(tx *btc.Tx, bl *btc.Block) {

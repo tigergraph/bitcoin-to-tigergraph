@@ -2,12 +2,11 @@ from blockchain.reader import BlockchainFileReader
 import multiprocessing as mp
 from kafka import KafkaConsumer, KafkaProducer
 import csv
-import time
 
 def cumulative_counts(last_file_no):
 	counts = {}
 	origin = {}
-	with open("file_block_count.csv","r") as f:
+	with open("/Users/sai/Desktop/bitcoin-to-tigergraph/Python/Block_counts/file_block_count.csv","r") as f:
 		reader = csv.reader(f, delimiter=",")
 		for line in reader:
 			counts[int(line[0])] = int(line[1])
@@ -28,6 +27,7 @@ def publish_message(producer_instance, topic_name, value):
         value_bytes = bytes(value, encoding='utf-8')
         producer_instance.send(topic_name, value=value_bytes)
         producer_instance.flush()
+        print("successful publish")
     except Exception as ex:
         print('Exception in publishing message')
         print(str(ex))
@@ -36,7 +36,7 @@ def publish_message(producer_instance, topic_name, value):
 def connect_kafka_producer():
     _producer = None
     try:
-        _producer = KafkaProducer(bootstrap_servers=['127.0.0.1:9092'], api_version=(0, 10))
+        _producer = KafkaProducer(bootstrap_servers=['192.168.7.202:9092'], api_version=(0, 10))
     except Exception as ex:
         print('Exception while connecting Kafka')
         print(str(ex))
@@ -45,12 +45,8 @@ def connect_kafka_producer():
 
 def worker(file_no):
 
-	t1 = time.time()
-
 	kafka_producer = connect_kafka_producer()
 
-	t2 = time.time()
-	print("connecting to kafka producer:",t2-t1)
 	try:
 		num_string = str(file_no)
 		while len(num_string) != 5:
@@ -58,12 +54,7 @@ def worker(file_no):
 
 		block_reader = BlockchainFileReader('/Users/sai/Desktop/bitcoin_data/blocks/blk'+num_string+'.dat')
 
-		t3 = time.time()
-		print("reading .dat",t3-t2)
-
 		for no,block in enumerate(block_reader):
-
-			t4 = time.time()
 
 			if no % 50 == 0:
 				print("Reading block #",no,"in file #",file_no)
@@ -79,11 +70,8 @@ def worker(file_no):
 			block_id = no + counts[file_no]
 			prev_block_id = block_id - 1
 
-			val = [current_block_hash,prev_block_hash,block_size,block_version,nonce,bits,block_timestamp,block_id,prev_block_id]
-			publish_message(kafka_producer,"blocks",','.join(map(str,val)))
-
-			t5 = time.time()
-			print("publishing",t5-t4)
+			val = [block_id,current_block_hash,"merkle",prev_block_hash,block_timestamp,block_version,nonce,bits]
+			publish_message(kafka_producer,"blocks1",','.join(map(str,val)))
 
 			transactions = block.transactions
 
@@ -108,7 +96,7 @@ def worker(file_no):
 					total_value += output_val
 
 					val = [txn_hash_outid,outid,output_val,address,txn_hash]
-					publish_message(kafka_producer,"outputs",','.join(map(str,val)))
+					publish_message(kafka_producer,"outputs1",','.join(map(str,val)))
 
 				inputs = transaction.inputs
 
@@ -118,22 +106,15 @@ def worker(file_no):
 					txn_hash_outid = prev_txn_hash+"_"+str(inp.txn_out_id)
 					outid = inp.txn_out_id
 
-					val = [txn_hash_outid,outid,txn_hash]
-					publish_message(kafka_producer,"ingoing_payment",','.join(map(str,val)))
+					val = [txn_hash_outid,outid,txn_hash,"sig","seq"]
+					publish_message(kafka_producer,"ingoing_payment1",','.join(map(str,val)))
 
 
-				val = [txn_hash,total_value,txn_version,txt_timestamp,current_block_hash]
-				publish_message(kafka_producer,"transactions",','.join(map(str,val)))
-
-			t6 = time.time()
-			print("reading transactions",t6-t5)
+				val = [txn_hash,"25","0",txn_version,current_block_hash,"true"]
+				publish_message(kafka_producer,"transactions1",','.join(map(str,val)))
 
 		if kafka_producer is not None:
 			kafka_producer.close()
-
-		
-		
-		
 		
 	except:
 		print("Error in streaming data")
