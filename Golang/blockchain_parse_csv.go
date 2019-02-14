@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/csv"
 	"encoding/hex"
+	"flag"
 	"fmt"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/blockdb"
@@ -37,7 +38,9 @@ func main() {
 	batchSize := 1000
 	endBlock := 350000
 	desiredStartBlock := 0
-	database := "~/bitcoin_data/blocks"
+	
+	dbAddr := flag.String("db", "~/Bitcoin/blocks", "database address")
+	database := *dbAddr
 
 	log.Println("Starting the parsing process...")
 	// Set real Bitcoin network
