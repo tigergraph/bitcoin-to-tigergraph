@@ -35,12 +35,31 @@ type File struct {
 func main() {
 
 	// PARAMETERS
-	batchSize := 1000
-	endBlock := 350000
-	desiredStartBlock := 0
-	
-	dbAddr := flag.String("db", "~/Bitcoin/blocks", "database address")
-	database := *dbAddr
+	var batchSize int
+	var endBlock int
+	var desiredStartBlock int
+	var database string
+	var outputDir string
+
+	flag.IntVar(&batchSize, "batch", 1000, "size of batch")
+	flag.IntVar(&endBlock, "end", 350000, "size of end block")
+	flag.IntVar(&desiredStartBlock, "start", 0, "size of desired start block")
+	flag.StringVar(&database, "db", "", "database directory")
+	flag.StringVar(&outputDir, "output", "./", "output directory")
+
+	flag.Parse()
+
+	// check data directory exist or not
+	if _, err := os.Stat(database); os.IsNotExist(err) {
+		fmt.Println("directory is no exist!")
+		os.Exit(1)
+	}
+
+	// create output directory if necessary
+	if _, ok := os.Stat(outputDir); os.IsNotExist(ok) {
+		fmt.Println("Create" + outputDir)
+		os.MkdirAll(outputDir, os.ModePerm)
+	}
 
 	log.Println("Starting the parsing process...")
 	// Set real Bitcoin network
@@ -57,7 +76,7 @@ func main() {
 
 	// Preparing files to write to
 	for _,v := range []string{"blocks","transactions","input","output"} {
-		file, err := os.OpenFile(v+".csv", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+		file, err := os.OpenFile(outputDir+"/"+v+".csv", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
 		fileMap[v] = File{fl:file, err:err}
 		checkError("Cannot create file", fileMap[v].err)
 		defer fileMap[v].fl.Close()
