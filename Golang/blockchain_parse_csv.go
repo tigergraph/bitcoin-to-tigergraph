@@ -51,14 +51,19 @@ func main() {
 
 	// check data directory exist or not
 	if _, err := os.Stat(database); os.IsNotExist(err) {
-		fmt.Println("directory is no exist!")
+		fmt.Println("Database directory doesn't exist!")
 		os.Exit(1)
 	}
 
 	// create output directory if necessary
 	if _, ok := os.Stat(outputDir); os.IsNotExist(ok) {
-		fmt.Println("Create" + outputDir)
-		os.MkdirAll(outputDir, os.ModePerm)
+		fmt.Println("Creating " + outputDir)
+		errMkdir := os.MkdirAll(outputDir, os.ModePerm)
+		if errMkdir != nil {
+			fmt.Println("Cannot create", outputDir)
+			os.Exit(1)
+		} 
+		fmt.Println(outputDir," created")
 	}
 
 	log.Println("Starting the parsing process...")
