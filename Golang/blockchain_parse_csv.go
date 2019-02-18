@@ -32,22 +32,32 @@ type File struct {
 	err error
 }
 
+var printHelp bool
+
+var batchSize int
+
+var endBlock int
+
+var desiredStartBlock int
+
+var database string
+
+var outputDir string
+
+
 func main() {
 
 	// PARAMETERS
-	var batchSize int
-	var endBlock int
-	var desiredStartBlock int
-	var database string
-	var outputDir string
-
-	flag.IntVar(&batchSize, "batch", 1000, "size of batch")
-	flag.IntVar(&endBlock, "end", 350000, "size of end block")
-	flag.IntVar(&desiredStartBlock, "start", 0, "size of desired start block")
-	flag.StringVar(&database, "db", "", "database directory")
-	flag.StringVar(&outputDir, "output", "./", "output directory")
+	setFlags(&printHelp)
 
 	flag.Parse()
+
+	if printHelp {
+		fmt.Println("-----------------------------")
+		flag.PrintDefaults()
+		fmt.Println("-----------------------------")
+		os.Exit(0)
+	}
 
 	// check data directory exist or not
 	if _, err := os.Stat(database); os.IsNotExist(err) {
@@ -144,6 +154,15 @@ func main() {
 	close(txn_channel)
 
 	log.Println("FINISHED!")
+}
+
+func setFlags(printHelp *bool) {
+	flag.BoolVar(printHelp, "help", false, "Print this help message.")
+	flag.IntVar(&batchSize, "batch", 1000, "size of batch")
+	flag.IntVar(&endBlock, "end", 350000, "size of end block")
+	flag.IntVar(&desiredStartBlock, "start", 0, "size of desired start block")
+	flag.StringVar(&database, "db", "", "database directory")
+	flag.StringVar(&outputDir, "output", "./", "output directory")
 }
 
 func checkError(message string, err error) {

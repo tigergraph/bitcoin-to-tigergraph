@@ -22,6 +22,8 @@ These instructions will get you a copy of the project up and running on your loc
 
 Fortunately [Bitcoin Core](https://bitcoin.org/en/download) is public software that downloads all of blockchain data directly. Please note that downloading all of the files is a lengthy process and will generate ~200GB of data (as of January 2019). The data will be in the *.dat format within the "blocks" folder.
 
+Approximately it takes 3 days on with AWS t2.2xlarge instance. Block files are ~200GB and index is around 250G.
+
 ## Turning raw data into csv files
 
 ### Installing Golang dependencies
@@ -41,7 +43,7 @@ In the program, set the desired start block and desired end block and press run.
 ```
 ./blockchain_parse_csv -batch=<size of batch> -db=<database directory> -end=<size of end block> -output=<csv files output directory> -start=<size of desired start block>
 ```
-You can also use `./blockchain_parse_csv -h` for help.
+You can also use `./blockchain_parse_csv -help=true` or `./blockchain_parse_csv -h` for help.
 
 
 
@@ -91,6 +93,7 @@ end
 ```
 SET sys.data_root = <absolute path of the csv files>
 ```
+For example, if the csv files you get before are under `/home/tigergraph/bitcion_data`, you can input `SET sys.data_root = "/home/tigergraph/bitcion_data"`
 
 4. Running loading job 
 
