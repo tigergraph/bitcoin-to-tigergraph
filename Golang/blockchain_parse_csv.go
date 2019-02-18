@@ -53,16 +53,15 @@ func main() {
 	flag.Parse()
 
 	if printHelp {
+		fmt.Println("-----------------------------")
 		flag.PrintDefaults()
+		fmt.Println("-----------------------------")
 		os.Exit(0)
 	}
 
 	// check data directory exist or not
 	if _, err := os.Stat(database); os.IsNotExist(err) {
 		fmt.Println("Database directory doesn't exist!")
-		fmt.Println("-----------------------------------------")
-		flag.PrintDefaults()
-		fmt.Println("-----------------------------------------")
 		os.Exit(1)
 	}
 
@@ -72,9 +71,6 @@ func main() {
 		errMkdir := os.MkdirAll(outputDir, os.ModePerm)
 		if errMkdir != nil {
 			fmt.Println("Cannot create", outputDir)
-			fmt.Println("-----------------------------------------")
-			flag.PrintDefaults()
-			fmt.Println("-----------------------------------------")
 			os.Exit(1)
 		} 
 		fmt.Println(outputDir," created")
