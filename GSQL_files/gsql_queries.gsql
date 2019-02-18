@@ -1,0 +1,123 @@
+CREATE QUERY addressRank (FLOAT maxChange, INT maxIter, FLOAT damping, BOOL display, INT outputLimit) FOR GRAPH Block_Chain{ 
+
+        TYPEDEF TUPLE<vertex Vertex_ID, FLOAT score> vertexScore;
+        HeapAccum<vertexScore>(outputLimit, score DESC) @@topScores;
+        MaxAccum<float> @@maxDiff = 9999; # max score change in an iteration
+        SumAccum<float> @received_score = 0; # sum of scores each vertex receives FROM neighbors
+        SumAccum<float> @score = 1;   # Initial score for every vertex is 1.
+        SetAccum<EDGE> @@edgeSet;                   # list of all edges, if display is needed
+
+        Start = {Address.*};   #  Start with all vertices of specified type(s)
+        WHILE @@maxDiff > maxChange LIMIT maxIter DO
+                @@maxDiff = 0;
+                V = SELECT s
+                    FROM Start:s -(address_to_output:e)-> Output:t
+                    ACCUM t.@received_score += s.@score/indegree(s)
+                    POST-ACCUM s.@score = (1.0-damping) + damping * s.@received_score,
+                               s.@received_score = 0,
+                               @@maxDiff += abs(s.@score - s.@score');
+        END; # END WHILE loop
+
+
+        IF outputLimit > 0 THEN
+                V = SELECT s FROM Start:s
+                    POST-ACCUM @@topScores += vertexScore(s, s.@score);
+                PRINT @@topScores;
+        END;
+
+
+        IF display THEN
+                PRINT Start[Start.@score];
+                Start = SELECT s
+                        FROM Start:s -(address_to_output:e)-> Output:t
+                        ACCUM @@edgeSet += e;
+                PRINT @@edgeSet;
+        END;
+}
+
+CREATE QUERY avg_outputs_per_address() FOR GRAPH Block_Chain { 
+    
+    SumAccum<float> @@outputcount = 0;
+    SumAccum<float> @@addresscount = 0;
+    
+    o = {Output.*};
+    NumOutputs = SELECT v FROM o:v
+                POST-ACCUM @@outputcount += 1;
+    d = {Address.*};
+    NumAddresses = SELECT a FROM d:a
+                  POST-ACCUM @@addresscount += 1;
+    
+    PRINT @@outputcount;
+    PRINT @@addresscount;
+    PRINT @@outputcount/@@addresscount;
+}
+
+CREATE QUERY getBalance(VERTEX<Address> a) FOR GRAPH Block_Chain RETURNS(int){
+    SumAccum<int> @@totalBalance = 0;
+    Start = {a};
+
+    ConnectedOutputs = SELECT tgt
+                        FROM Start:s -(address_to_output:e)-> Output:tgt
+                        WHERE isSpent(tgt) == false
+                        POST_ACCUM @@totalBalance += tgt.transaction_value;
+
+    PRINT @@totalBalance;
+    
+    RETURN @@totalBalance;
+}
+
+CREATE QUERY indegree(VERTEX<Address> a) FOR GRAPH Block_Chain RETURNS(int){ 
+  /* Write query logic here */ 
+    SumAccum<int> @@indegree;
+    Start = {a};
+    
+    degree_count = SELECT tgt
+                FROM Start:s -(address_to_output:e)-> Output:tgt
+                POST_ACCUM @@indegree += 1; 
+  PRINT @@indegree;
+    RETURN @@indegree;
+}
+
+CREATE QUERY isSpent(VERTEX<Output> o) FOR GRAPH Block_Chain RETURNS(bool){
+    SumAccum<int> @@count = 0;
+    Start = {o};
+
+    numInputs = SELECT tgt
+                FROM Start:s -(txn_input:e)-> Transaction:tgt
+                POST_ACCUM @@count += 1;
+
+    PRINT @@count > 0;
+    RETURN @@count > 0;
+}
+
+CREATE QUERY mostExpensiveOutputs(INT topk) FOR GRAPH Block_Chain {
+    
+    o = {Output.*};
+    mostExpensive = SELECT v FROM o:v
+                    ORDER BY v.transaction_value DESC
+                    LIMIT topk;
+
+    PRINT mostExpensive;
+}
+
+CREATE QUERY richestAddresses(INT topk) FOR GRAPH Block_Chain {
+	  SumAccum<int> @satoshi;
+
+  AllOut (ANY) = {Output.*};
+
+  // select all the outputs that have been spent
+  Spent = SELECT src FROM AllOut:src-(txn_input:e)->:tgt;
+
+  // get the unspent outputs
+  Unspent = AllOut MINUS Spent;
+
+  // get the addresses who owned the unspent outputs
+  vSet = SELECT tgt FROM Unspent:src-(output_to_address:e)->:tgt
+    ACCUM tgt.@satoshi += src.transaction_value;
+
+  // get top K according to their satoshi
+  vSet = SELECT src FROM vSet:src
+    ORDER BY src.@satoshi DESC
+    LIMIT topk;
+  print vSet;
+}
