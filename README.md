@@ -46,7 +46,7 @@ In the program, set the desired start block and desired end block and press run.
 You can also use `./blockchain_parse_csv -help=true` or `./blockchain_parse_csv -h` for help.
 
 
-## Loading the data into TigerGraph
+## Loading and Visualizing the data into TigerGraph
 
 You can find the GSQL queries under `/GSQL` directory. 
 
@@ -99,3 +99,11 @@ For example, if the csv files you get before are under `/home/tigergraph/bitcion
 RUN JOB load_blockchain_data
 ```
 More detailed reference please check [TigerGraph document](https://docs.tigergraph.com/dev/gsql-ref/ddl-and-loading/creating-a-loading-job)
+
+5. Visualization
+
+Run following command in Linux shell.
+
+```
+gsql queries.gql
+```

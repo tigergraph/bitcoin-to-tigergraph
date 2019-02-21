@@ -1,3 +1,18 @@
+USE GRAPH Block_Chain
+
+CREATE QUERY indegree(VERTEX<Address> a) FOR GRAPH Block_Chain RETURNS(int){ 
+  /* Write query logic here */ 
+    SumAccum<int> @@indegree;
+    Start = {a};
+    
+    degree_count = SELECT tgt
+                FROM Start:s -(address_to_output:e)-> Output:tgt
+                POST_ACCUM @@indegree += 1; 
+    PRINT @@indegree;
+    RETURN @@indegree;
+}
+
+
 CREATE QUERY addressRank (FLOAT maxChange, INT maxIter, FLOAT damping, BOOL display, INT outputLimit) FOR GRAPH Block_Chain{ 
 
         TYPEDEF TUPLE<vertex Vertex_ID, FLOAT score> vertexScore;
@@ -52,6 +67,19 @@ CREATE QUERY avg_outputs_per_address() FOR GRAPH Block_Chain {
     PRINT @@outputcount/@@addresscount;
 }
 
+CREATE QUERY isSpent(VERTEX<Output> o) FOR GRAPH Block_Chain RETURNS(bool){
+    SumAccum<int> @@count = 0;
+    Start = {o};
+
+    numInputs = SELECT tgt
+                FROM Start:s -(txn_input:e)-> Transaction:tgt
+                POST_ACCUM @@count += 1;
+
+    PRINT @@count > 0;
+    RETURN @@count > 0;
+}
+
+
 CREATE QUERY getBalance(VERTEX<Address> a) FOR GRAPH Block_Chain RETURNS(int){
     SumAccum<int> @@totalBalance = 0;
     Start = {a};
@@ -66,29 +94,6 @@ CREATE QUERY getBalance(VERTEX<Address> a) FOR GRAPH Block_Chain RETURNS(int){
     RETURN @@totalBalance;
 }
 
-CREATE QUERY indegree(VERTEX<Address> a) FOR GRAPH Block_Chain RETURNS(int){ 
-  /* Write query logic here */ 
-    SumAccum<int> @@indegree;
-    Start = {a};
-    
-    degree_count = SELECT tgt
-                FROM Start:s -(address_to_output:e)-> Output:tgt
-                POST_ACCUM @@indegree += 1; 
-  PRINT @@indegree;
-    RETURN @@indegree;
-}
-
-CREATE QUERY isSpent(VERTEX<Output> o) FOR GRAPH Block_Chain RETURNS(bool){
-    SumAccum<int> @@count = 0;
-    Start = {o};
-
-    numInputs = SELECT tgt
-                FROM Start:s -(txn_input:e)-> Transaction:tgt
-                POST_ACCUM @@count += 1;
-
-    PRINT @@count > 0;
-    RETURN @@count > 0;
-}
 
 CREATE QUERY mostExpensiveOutputs(INT topk) FOR GRAPH Block_Chain {
     
@@ -101,23 +106,25 @@ CREATE QUERY mostExpensiveOutputs(INT topk) FOR GRAPH Block_Chain {
 }
 
 CREATE QUERY richestAddresses(INT topk) FOR GRAPH Block_Chain {
-	  SumAccum<int> @satoshi;
+	SumAccum<int> @satoshi;
 
-  AllOut (ANY) = {Output.*};
+    AllOut (ANY) = {Output.*};
 
-  // select all the outputs that have been spent
-  Spent = SELECT src FROM AllOut:src-(txn_input:e)->:tgt;
+    // select all the outputs that have been spent
+    Spent = SELECT src FROM AllOut:src-(txn_input:e)->:tgt;
 
-  // get the unspent outputs
-  Unspent = AllOut MINUS Spent;
+    // get the unspent outputs
+    Unspent = AllOut MINUS Spent;
 
-  // get the addresses who owned the unspent outputs
-  vSet = SELECT tgt FROM Unspent:src-(output_to_address:e)->:tgt
-    ACCUM tgt.@satoshi += src.transaction_value;
+    // get the addresses who owned the unspent outputs
+    vSet = SELECT tgt FROM Unspent:src-(output_to_address:e)->:tgt
+      ACCUM tgt.@satoshi += src.transaction_value;
 
-  // get top K according to their satoshi
-  vSet = SELECT src FROM vSet:src
-    ORDER BY src.@satoshi DESC
-    LIMIT topk;
-  print vSet;
+    // get top K according to their satoshi
+    vSet = SELECT src FROM vSet:src
+      ORDER BY src.@satoshi DESC
+      LIMIT topk;
+    print vSet;
 }
+
+INSTALL QUERY *
