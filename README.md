@@ -46,53 +46,51 @@ In the program, set the desired start block and desired end block and press run.
 You can also use `./blockchain_parse_csv -help=true` or `./blockchain_parse_csv -h` for help.
 
 
+## Loading and Visualizing the data into TigerGraph
 
-## Loading the data into TigerGraph
+You can find the GSQL queries under `/GSQL` directory. 
 
-Please open GSQL and running following query.
+We can execute this full set of commands without entering the GSQL shell. For example, if the GSQL commands is in a Linux file named /home/tigergraph/hello2.gsql. In a Linux shell, under /home/tigergraph, type the following:
+
+```
+gsql hello2.gsql
+```
 
 1. Creating graph
 
+Run following command in Linux shell.
+
 ```
-create vertex Output (primary_id transaction_hash_outid string, outid int, transaction_value int)
-create vertex Transaction (primary_id transaction_hash string, txn_size int, version_no int, txn_locktime int, is_coinbase bool)
-create vertex Block (primary_id curr_hash string, block_index int, merkle_root string, block_time datetime, block_version int, block_bits int)
-create vertex Address (primary_id address string)
-create directed edge output_to_address (from Output, to Address) with reverse_edge="address_to_output"
-create directed edge txn_output (from Transaction, to Output) with reverse_edge="output_origin_txn"
-create directed edge txn_input (from Output, to Transaction) with reverse_edge="txn_origin_input"
-create directed edge txn_to_block (from Transaction, to Block) with reverse_edge="block_to_txn"
-create directed edge chain (from Block, to Block) with reverse_edge="reverse_chain"
-create graph Block_Chain (*)
+gsql schema.gsql
 ```
+
+Or directly copy the content in GSQL/schema.gsql into GSQL shell.
 
 2. Creating loading job
 
+If you haven't set up `sys.data_root` before, you should do step 3 before step 2. Then run following command in Linux shell.
+
 ```
-begin
-CREATE LOADING JOB load_blockchain_data FOR GRAPH Block_Chain {
-	DEFINE FILENAME blocks = "$sys.data_root/blocks.csv";
-	DEFINE FILENAME txns = "$sys.data_root/transactions.csv";
-	DEFINE FILENAME outputs = "$sys.data_root/output.csv";
-	DEFINE FILENAME ingoing_payment = "$sys.data_root/input.csv";
-	LOAD blocks to vertex Block values ($1,$0,$2,$4,$5,$6);
-	LOAD txns to vertex Transaction values ($0,$1,$3,$2,$5);
-	LOAD blocks to edge chain values ($3,$1);
-	LOAD txns to edge txn_to_block values ($0,$4);
-	LOAD outputs to vertex Output values ($0,$1,$2);
-	LOAD outputs to edge output_to_address values ($0,$3);
-	LOAD outputs to edge txn_output values ($4,$0);
-	LOAD ingoing_payment to edge txn_input values ($0,$2);
-	LOAD outputs to vertex Address values ($3);
-}
-end
+gsql loading_job.gsql
 ```
 
+Or directly copy the content in GSQL/loading_job.gsql into GSQL shell.
+
+
 3. Setting the session parameter
+
+Type gsql as below. A GSQL shell prompt should appear as below.
+
+```
+$ gsql 
+GSQL >
+```
+Then set `sys.data_root`
 
 ```
 SET sys.data_root = <absolute path of the csv files>
 ```
+
 For example, if the csv files you get before are under `/home/tigergraph/bitcion_data`, you can input `SET sys.data_root = "/home/tigergraph/bitcion_data"`
 
 4. Running loading job 
@@ -101,3 +99,11 @@ For example, if the csv files you get before are under `/home/tigergraph/bitcion
 RUN JOB load_blockchain_data
 ```
 More detailed reference please check [TigerGraph document](https://docs.tigergraph.com/dev/gsql-ref/ddl-and-loading/creating-a-loading-job)
+
+5. Visualization
+
+Run following command in Linux shell.
+
+```
+gsql queries.gql
+```
