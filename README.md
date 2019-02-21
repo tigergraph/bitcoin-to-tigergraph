@@ -18,6 +18,9 @@ These instructions will get you a copy of the project up and running on your loc
 * At least 5GB of RAM and 400GB of Disk Space (if creating csv files), 200GB of Disk Space (if using kafka)
 * Apache Kafka (if planning to use Kafka loader)
 
+#### Note:
+TigerGraph default query timeout is 16. Please check [TigerGraph Documentation: Why has my query timed out?](https://docs.tigergraph.com/admin/admin-guide/system-administration-faqs#TigerGraphSystemAdministrationFAQs-Whyhasmyrequesttimedout?) to modify your timeout.
+
 ### Getting the raw blockchain data
 
 Fortunately [Bitcoin Core](https://bitcoin.org/en/download) is public software that downloads all of blockchain data directly. Please note that downloading all of the files is a lengthy process and will generate ~200GB of data (as of January 2019). The data will be in the *.dat format within the "blocks" folder.
@@ -111,4 +114,52 @@ Run following command in Linux shell.
 
 ```
 gsql queries.gql
+```
+
+## Dataset
+In our test, we used the full-node data by 2019.02.16, and after transforming to CSV files, the size is shown as below
+```
+$ du -h /mnt/data/csv/btc_csv/
+569G    /mnt/data/csv/btc_csv/
+
+$ du -h /mnt/data/csv/btc_csv/*
+133M    /mnt/data/csv/btc_csv/blocks.csv
+346G    /mnt/data/csv/btc_csv/input.csv
+171G    /mnt/data/csv/btc_csv/output.csv
+52G     /mnt/data/csv/btc_csv/transactions.csv
+```
+## TigerGraph Data Loading Report
+### Hardware
+In the test, we used AWS EC2 instance of type [r5.24xlarge](https://aws.amazon.com/ec2/instance-types/r5/), which has 96vCPU and 768G memory.
+
+TigerGraph system and data storage are running on AWS EBS with 6144 IOPS
+
+In the below section, the memory usage is only 200G. Theoratically, you can load the data with [TigerGraph developer edition](https://www.tigergraph.com/developer/) on any machine with 250G memory. However, some large queries would need more memory.
+
+### Loading Time
+The total loading time is 2 hours 50 minutes
+The loading time of each file is shown as below:
+```
+  +----------------------------------------------------------------------------------+
+  |                              FILENAME |   LOADED LINES |   AVG SPEED |   DURATION|
+  |      /mnt/data/csv/btc_csv/blocks.csv |         563316 |    293 kl/s |     1.92 s|
+  |       /mnt/data/csv/btc_csv/input.csv |      968416307 |    461 kl/s |  2096.50 s|
+  |      /mnt/data/csv/btc_csv/output.csv |     1033945270 |    144 kl/s |  7149.25 s|
+  |/mnt/data/csv/btc_csv/transactions.csv |      383614417 |    384 kl/s |   997.75 s|
+  +----------------------------------------------------------------------------------+
+```
+
+### Memory Usage
+```
+$ free -h
+              total        used        free      shared  buff/cache   available
+Mem:           747G        202G         13G        872K        532G        540G
+Swap:            0B          0B          0B
+```
+
+### Disk Usage
+```
+$ du /mnt/data/tigergraph/gstore/ -h
+...
+262G    /mnt/data/tigergraph/gstore/
 ```
