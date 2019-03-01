@@ -2,9 +2,9 @@
 
 The goal of this project was to provide a method for any user to upload blockchain data onto the TigerGraph database w/o the use of extra hardware boosts or tremendous amount of CPU usage or memory consumption. The reason for this was to make analyzing the blockchain available to both interested companies as well as amateur developers. Running this program will produce parsed sets of blockchain data that will be ready to analyze on the TigerGraph platform.
 
-We provide a way to utilize TigerGraph's batch loading capabilites as well as it's recently developed streaming capabilities via kafka loaders.
+We provide a way to utilize TigerGraph's batch loading capabilites.
 
-We provide an implementation of this code in both Python and Go.
+We provide an implementation of this code in Go.
 
 ## Getting started
 
