@@ -163,3 +163,8 @@ $ du /mnt/data/tigergraph/gstore/ -h
 ...
 262G    /mnt/data/tigergraph/gstore/
 ```
+
+## Contributors
+Sai Pusapaty
+Aining Wang
+Heqing Ya
