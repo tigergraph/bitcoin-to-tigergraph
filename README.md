@@ -165,6 +165,8 @@ $ du /mnt/data/tigergraph/gstore/ -h
 ```
 
 ## Contributors
+```
 Sai Pusapaty
 Aining Wang
-Heqing Ya
+Heqing Ya (heqing.ya@tigergraph.com)
+```
