@@ -43,15 +43,7 @@ Please build all the files that are necessary by cd'ing into appropriate folders
 
 In the program, set the desired start block and desired end block and press run. Other factors to change if wanted are batch size (determines number of goroutines) as well as buffer sizes for each channel used to process data. You can expect this program to take a few hours to process all of blockhain with given parameters.
 
-```
-./blockchain_parse_csv \
-  -batch=<size of batch> \
-  -db=<database directory> \
-  -end=<size of end block> \
-  -output=<csv files output directory> \
-  -start=<size of desired start block>
-```
-You can also use `./blockchain_parse_csv -help=true` or `./blockchain_parse_csv -h` for help.
+Use `./blockchain_parse_csv -help=true` or `./blockchain_parse_csv -h` for more detail.
 
 
 ## Loading and Visualizing the data into TigerGraph
