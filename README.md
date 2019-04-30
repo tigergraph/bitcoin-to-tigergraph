@@ -161,4 +161,5 @@ $ du /mnt/data/tigergraph/gstore/ -h
 Sai Pusapaty
 Aining Wang
 Heqing Ya (heqing.ya [at] tigergraph.com)
+Elena Su (huiting.su [at] tigergraph.com)
 ```
